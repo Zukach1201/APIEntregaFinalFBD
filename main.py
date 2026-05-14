@@ -14,10 +14,8 @@ app.add_middleware(
 )
 
 
-client = MongoClient(os.environ["MONGO_URI"])  
-# Reemplaza "MONGO_URI" con el nombre de la variable de entorno que contiene tu cadena de conexión a MongoDB
-db = client["nombre_de_tu_base_de_datos"] 
-# Reemplaza "nombre_de_tu_base_de_datos" con el nombre de tu base de datos en MongoDB
+client = MongoClient(os.environ["MONGO_URI"])
+db = client[os.environ["MONGO_DB"]]
 
 
 @app.get("/")
