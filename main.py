@@ -20,7 +20,15 @@ db = client[os.environ["MONGO_DB"]]
 
 @app.get("/")
 def inicio():
-    return {"estado": "API funcionando correctamente"}
+    return {"estado": "API funcionando correctamente...? JAJJA"}
+
+@app.get("/bares")
+def get_bares():
+    return db["Bares"].find()
+
+@app.post("/bares")
+def post_bares(datos: list):
+    resultado = db["Bares"].insertMany(datos)
 
 @app.get('/bares/{bar_id}/comentarios')
 def get_comentarios(bar_id: int):
