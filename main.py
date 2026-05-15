@@ -25,11 +25,11 @@ def inicio():
 @app.get("/bares")
 def get_bares():
     return db["Bares"].find()
-
+"""
 @app.post("/bares")
 def post_bares(datos: list):
     resultado = db["Bares"].insertMany(datos)
-
+"""
 @app.get('/bares/{bar_id}/comentarios')
 def get_comentarios(bar_id: int):
     comentarios = db["Bares"].find_one({'_id': bar_id},{'comentarios':1,"_id":0})
