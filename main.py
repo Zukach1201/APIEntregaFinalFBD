@@ -19,7 +19,7 @@ db = client[os.environ["MONGO_DB"]]
 
 @app.get("/")
 def inicio():
-    return {"estado": "API funcionando correctamente..."}
+    return {"estado": "API funcionando correctamente... (todo es una mentira del estado)"}
 
 @app.get('/hoteles/{hotel_id}/resenadestacada')
 def get_resenadestacada(hotel_id: str):
