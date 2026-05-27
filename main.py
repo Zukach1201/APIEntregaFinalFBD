@@ -54,7 +54,7 @@ def post_resena(hotel_id: str, datos: dict):
     datos['estado'] = 'PUBLICADA' 
     datos['votosUtiles'] = 0
     db["resenas"].insert_one(datos)
-    return {'mensaje': 'Reseña creada correctamente', 'resenaId': datos['_id']}
+    return {'mensaje': 'Reseña creada correctamente', 'resenaId': str(datos['_id'])}
 
 # RF2 - Editar reseña
 @app.put('/resenas/{resena_id}')
