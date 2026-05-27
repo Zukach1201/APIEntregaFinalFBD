@@ -33,7 +33,7 @@ def post_hoteles(datos: list = Body(...)):
 
 @app.get('/hoteles/{hotel_id}/resenadestacada')
 def get_resenadestacada(hotel_id: str):
-    destacada = db["hoteles"].find_one({'hotelId': hotel_id},{"resenaDestacada":1,"_id":0})
+    destacada = db["hoteles"].find_one({'_id': hotel_id},{"resenaDestacada":1,"_id":0})
     return list(destacada) if destacada else []
 
 @app.get('/hoteles/{hotel_id}/resenas')
