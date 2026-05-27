@@ -13,8 +13,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-client = MongoClient("mongodb://ISIS2304B19202610:fgMUV1ChCzyg@157.253.236.88:8087/")
-db = client["ISIS2304B19202610"]
+client = MongoClient(os.environ["MONGO_URI"])
+db = client[os.environ["MONGO_DB"]]
 
 @app.get("/")
 def inicio():
