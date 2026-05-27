@@ -1,7 +1,6 @@
 from fastapi import FastAPI, Body, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
-import pymongo
 from datetime import datetime
 import os
 
@@ -14,8 +13,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-client = MongoClient(os.environ["MONGO_URI"])
-db = client[os.environ["MONGO_DB"]]
+client = MongoClient("mongodb://ISIS2304B19202610:fgMUV1ChCzyg@157.253.236.88:8087/")
+db = client["ISIS2304B19202610"]
 
 @app.get("/")
 def inicio():
@@ -94,7 +93,7 @@ def get_resenas(hotel_id: str, skip: int, limit: int, sort_by_hotel: bool):
     else:
         sort_criteria = {"fecha": -1}
     
-    resenas = list(db["resenas"].find(query, {"_id": 1, "fecha": 1, "calificacion": 1, "comentario": 1, "votosUtiles": 1}).sort(sort_criteria).skip(skip).limit(limit))
+    resenas = list(db["resenas"].find(query, {"_id": 0, "fecha": 1, "calificacion": 1, "comentario": 1, "votosUtiles": 1}).sort(sort_criteria).skip(skip).limit(limit))
     return resenas
 
 # RF5 - Marcar reseña como útil
