@@ -19,7 +19,7 @@ db = client[os.environ["MONGO_DB"]]
 
 @app.get("/")
 def inicio():
-    return {"estado": "API funcionando correctamente... (todo es una mentira del estado)"}
+    return {"estado": "API funcionando correctamente..."}
 
 @app.get("/hoteles")
 def get_hoteles():
@@ -31,10 +31,11 @@ def post_hoteles(datos: list = Body(...)):
     ""].insert_many(datos)
     return {"resultado": "UwU"}
 
-@app.get('/hoteles/{hotel_id}/resenadestacada')
+@app.get('/hoteles/{hotel_id}/resenadestacada') 
+##mejor que esta sea el comentario con más likes o algo así, pero por ahora lo dejo así
 def get_resenadestacada(hotel_id: str):
-    destacada = db["hoteles"].find_one({'_id': hotel_id},{"resenaDestacada":1,"_id":0})
-    return list(destacada) if destacada else []
+    resena = db["hoteles"].find_one({'_id': hotel_id},{'resenaDestacada':1,"_id":0})
+    return resena['resenaDestacada'] if resena and 'resenaDestacada' in resena else []  
 
 @app.get('/hoteles/{hotel_id}/resenas')
 def get_resenas(hotel_id: str):
@@ -49,4 +50,3 @@ def post_resena(hotel_id: str, datos: dict):
     datos['votosUtiles'] = 0
     db["resenas"].insert_one(datos)
     return {'mensaje': 'Reseña guardada correctamente'}
-
