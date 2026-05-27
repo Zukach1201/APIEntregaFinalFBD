@@ -4,7 +4,6 @@ from pymongo import MongoClient
 import pymongo
 from datetime import datetime
 import os
-import uuid
 
 app = FastAPI()
 
@@ -15,10 +14,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-mongo_uri = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
-mongo_db = os.environ.get("MONGO_DB", "dann_alpes")
-client = MongoClient(mongo_uri)
-db = client[mongo_db]
+client = MongoClient(os.environ["MONGO_URI"])
+db = client[os.environ["MONGO_DB"]]
 
 @app.get("/")
 def inicio():
@@ -34,8 +31,7 @@ def get_usuarios():
 
 @app.post("/hoteles")
 def post_hoteles(datos: list = Body(...)):
-    if datos:
-        db["hoteles"].insert_many(datos)
+    db["hoteles"].insert_many(datos)
     return {"resultado": "UwU"}
 
 
@@ -44,15 +40,15 @@ def post_hoteles(datos: list = Body(...)):
 def post_resena(hotel_id: str, datos: dict):
     reserva_id = datos.get("reservaId")
     usuario_id = datos.get("usuarioId")
+
+    existe = db["resenas"].find_one({
+        "reservaId": reserva_id, 
+        "usuarioId": usuario_id, 
+        "hotelId": hotel_id
+    })
     
-    if reserva_id and usuario_id:
-        existe = db["resenas"].find_one({
-            "reservaId": reserva_id, 
-            "usuarioId": usuario_id, 
-            "hotelId": hotel_id
-        })
-        if existe:
-            raise HTTPException(status_code=400, detail="El usuario ya ha realizado una reseña para esta reserva.")
+    if existe:
+        raise HTTPException(status_code=400, detail="El usuario ya ha realizado una reseña para esta reserva.")
 
     datos['hotelId'] = hotel_id
     datos['fecha'] = datetime.now().isoformat()
@@ -64,18 +60,14 @@ def post_resena(hotel_id: str, datos: dict):
 # RF2 - Editar reseña
 @app.put('/resenas/{resena_id}')
 def put_resena(resena_id: str, datos: dict):
-    update_fields = {}
-    if "calificacion" in datos:
-        update_fields["calificacion"] = datos["calificacion"]
-    if "comentario" in datos:
-        update_fields["comentario"] = datos["comentario"]
+    bucket = {}
+    bucket["calificacion"] = datos["calificacion"]
+    bucket["comentario"] = datos["comentario"]
         
-    if not update_fields:
-        raise HTTPException(status_code=400, detail="No hay datos para actualizar.")
         
     resultado = db["resenas"].update_one(
         {"_id": resena_id},
-        {"$set": update_fields}
+        {"$set": bucket}
     )
     if resultado.matched_count == 0:
         raise HTTPException(status_code=404, detail="Reseña no encontrada.")
@@ -94,13 +86,14 @@ def delete_resena(resena_id: str):
 
 # RF4 - Consultar reseñas de un hotel
 @app.get('/hoteles/{hotel_id}/resenas')
-def get_resenas(hotel_id: str, skip: int = 0, limit: int = 10, sort_by: str = "fecha"):
+def get_resenas(hotel_id: str, skip: int, limit: int, sort_by_hotel: bool):
     query = {'hotelId': hotel_id, 'estado': 'PUBLICADA'}
     
-    sort_criteria = [("fecha", pymongo.DESCENDING)]
-    if sort_by == "utilidad":
-        sort_criteria = [("votosUtiles", pymongo.DESCENDING), ("fecha", pymongo.DESCENDING)]
-        
+    if sort_by_hotel:
+        sort_criteria = {"hotel": 1}
+    else:
+        sort_criteria = {"fecha": -1}
+    
     resenas = list(db["resenas"].find(query, {"_id": 1, "fecha": 1, "calificacion": 1, "comentario": 1, "votosUtiles": 1}).sort(sort_criteria).skip(skip).limit(limit))
     return resenas
 
@@ -117,12 +110,13 @@ def votar_resena_util(resena_id: str):
 
 # RF6 - Consultar historial de reseñas propias
 @app.get('/usuarios/{usuario_id}/resenas')
-def get_historial_resenas(usuario_id: str, sort_by: str = "fecha"):
+def get_historial_resenas(usuario_id: str, sort_by_hotel: bool):
     query = {"usuarioId": usuario_id}
     
-    sort_criteria = [("fecha", pymongo.DESCENDING)]
-    if sort_by == "hotel":
-        sort_criteria = [("hotelId", pymongo.ASCENDING), ("fecha", pymongo.DESCENDING)]
+    if sort_by_hotel:
+        sort_criteria = {"hotel": 1}
+    else:
+        sort_criteria = {"fecha": -1}
         
     resenas = list(db["resenas"].find(query, {
         "_id": 1, "hotelId": 1, "estado": 1, "calificacion": 1, "comentario": 1, "respuestaHotel": 1, "votosUtiles": 1, "fecha": 1
@@ -132,19 +126,16 @@ def get_historial_resenas(usuario_id: str, sort_by: str = "fecha"):
 # RF7 - Responder reseña
 @app.put('/resenas/{resena_id}/respuesta')
 def responder_resena(resena_id: str, respuesta: dict = Body(...)):
-    texto_respuesta = respuesta.get("respuestaHotel")
-    if not texto_respuesta:
-        raise HTTPException(status_code=400, detail="El campo respuestaHotel es requerido.")
-        
+    
     resultado = db["resenas"].update_one(
         {"_id": resena_id},
-        {"$set": {"respuestaHotel": texto_respuesta}}
+        {"$set": {"respuestaHotel": respuesta.get("respuestaHotel")}}
     )
     if resultado.matched_count == 0:
         raise HTTPException(status_code=404, detail="Reseña no encontrada.")
     return {'mensaje': 'Respuesta registrada correctamente'}
 
-# RF8 - Eliminar reseña (Administrador)
+# RF8 - Eliminar reseña
 @app.delete('/resenas/{resena_id}/admin')
 def delete_resena_admin(resena_id: str):
     resultado = db["resenas"].update_one(
@@ -182,10 +173,6 @@ def get_resenadestacada(hotel_id: str):
     hotel = db["hoteles"].find_one({'_id': hotel_id},{'resenaDestacada':1,"_id":0})
     return hotel.get('resenaDestacada', {}) if hotel else {}
 
-
-# ==========================================
-# REQUERIMIENTOS DE CONSULTA (RFC1 - RFC3)
-# ==========================================
 
 # RFC1 - Top hoteles por calificación
 @app.get('/estadisticas/top-hoteles')
