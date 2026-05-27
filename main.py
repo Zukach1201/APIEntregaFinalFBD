@@ -176,19 +176,11 @@ def get_resenadestacada(hotel_id: str):
 
 # RFC1 - Top hoteles por calificación
 @app.get('/estadisticas/top-hoteles')
-def get_top_hoteles(fecha_inicio: str = None, fecha_fin: str = None):
-    match_stage = {"estado": "PUBLICADA"}
+def get_top_hoteles(fecha_inicio: str, fecha_fin: str):
     
-    if fecha_inicio or fecha_fin:
-        fecha_query = {}
-        if fecha_inicio:
-            fecha_query["$gte"] = fecha_inicio
-        if fecha_fin:
-            fecha_query["$lte"] = fecha_fin
-        match_stage["fecha"] = fecha_query
-        
-    pipeline = [
-        {"$match": match_stage},
+    resultados = list(db["resenas"].aggregate([
+        {"$match": {"estado": "PUBLICADA",
+                   "fecha": {"$gte": fecha_inicio, "$lte": fecha_fin}}},
         {"$group": {
             "_id": "$hotelId",
             "promedioCalificacion": {"$avg": "$calificacion"},
@@ -196,30 +188,21 @@ def get_top_hoteles(fecha_inicio: str = None, fecha_fin: str = None):
         }},
         {"$sort": {"promedioCalificacion": -1}},
         {"$limit": 10},
-        {"$lookup": {
-            "from": "hoteles",
-            "localField": "_id",
-            "foreignField": "_id",
-            "as": "infoHotel"
-        }},
-        {"$unwind": "$infoHotel"},
         {"$project": {
             "hotelId": "$_id",
             "_id": 0,
-            "nombre": "$infoHotel.nombre",
-            "ubicacion": "$infoHotel.ubicacion",
             "promedioCalificacion": {"$round": ["$promedioCalificacion", 2]},
             "totalResenas": 1
         }}
-    ]
+    ]))
     
-    resultados = list(db["resenas"].aggregate(pipeline))
     return resultados
 
 # RFC2 - Evolución de la reputación de un hotel en el tiempo
 @app.get('/hoteles/{hotel_id}/reputacion')
 def get_evolucion_reputacion(hotel_id: str, anio: str):
-    pipeline = [
+    
+    resultados = list(db["resenas"].aggregate([
         {"$match": {
             "hotelId": hotel_id,
             "estado": "PUBLICADA",
@@ -240,15 +223,15 @@ def get_evolucion_reputacion(hotel_id: str, anio: str):
             "promedioCalificacion": {"$round": ["$promedioCalificacion", 2]},
             "totalResenas": 1
         }}
-    ]
+    ]))
     
-    resultados = list(db["resenas"].aggregate(pipeline))
     return resultados
 
 # RFC3 - Perfil comparativo de hoteles por ciudad
 @app.get('/estadisticas/ciudades/{ciudad}/comparativo')
 def get_comparativo_ciudad(ciudad: str):
-    pipeline = [
+    
+    resultados = list(db["hoteles"].aggregate([
         {"$match": {"ubicacion": ciudad}},
         {"$lookup": {
             "from": "resenas",
@@ -301,7 +284,5 @@ def get_comparativo_ciudad(ciudad: str):
             }
         }},
         {"$sort": {"promedioCalificacion": -1}}
-    ]
-    
-    resultados = list(db["hoteles"].aggregate(pipeline))
+    ]))
     return resultados
