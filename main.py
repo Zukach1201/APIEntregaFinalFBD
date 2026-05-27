@@ -21,15 +21,20 @@ db = client[os.environ["MONGO_DB"]]
 def inicio():
     return {"estado": "API funcionando correctamente..."}
 
+@app.get("/hoteles")
+def get_hoteles():
+    return list(db["hoteles"].find({},{'_id':0}))
+
+@app.post("/hoteles")
+def post_hoteles(datos: list = Body(...)):
+    resultado = db["hoteles" \
+    ""].insert_many(datos)
+    return {"resultado": "UwU"}
+
 @app.get('/hoteles/{hotel_id}/resenadestacada')
 def get_resenadestacada(hotel_id: str):
-    # Buscamos las reseñas del hotel, ordenamos por votosUtiles de mayor a menor (-1) y traemos la primera (.limit(1))
-    resena_mas_votada = list(db["resenas"].find(
-        {'hotelId': hotel_id, 'estado': 'PUBLICADA'},
-        {'_id': 0}
-    ).sort('votosUtiles', -1).limit(1))
-
-    return resena_mas_votada[0] if resena_mas_votada else None
+    destacada = db["hoteles"].find_one({'hotelId': hotel_id},{"resenaDestacada":1,"_id":0})
+    return list(destacada) if destacada else []
 
 @app.get('/hoteles/{hotel_id}/resenas')
 def get_resenas(hotel_id: str):
